@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Horario de Evaluaciones</title>
+    <link rel="stylesheet" href="Horario.CSS">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Mi Horario de Evaluaciones</h1>
+            <p>Gestiona tus fechas de evaluación de manera inteligente</p>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <h2 class="section-title">Semana de Evaluaciones</h2>
+        </div>
+        <div class="schedule-table">
+            <div style="overflow-x:auto;">
+                <table id="scheduleTable">
+                    <thead>
+                        <tr>
+                            <th>Materias</th>
+                            <th>Evaluación 1</th>
+                            <th>Evaluación 2</th>
+                            <th>Evaluación 3</th>
+                            <th>Evaluación 4</th>
+                            <th>Evaluación 5</th>
+                            <th>Evaluación 6</th>
+                            <th>Evaluación 7</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                    </tbody>
+                </table>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="addSubject()">
+                        ➕ Agregar Materia
+                    </button>
+                </div>
+            </div> <!-- cierre del div con scroll -->
+            <div class="controls">
+                <h3 style="color: #1565C0; margin: 0;">Configuración de Colores por Tipo de Evaluación</h3>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color pc1" onclick="editColor('pc1')"></div>
+                    <span>PC1 - Práctica Calificada 1</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color pc2" onclick="editColor('pc2')"></div>
+                    <span>PC2 - Práctica Calificada 2</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color pc3" onclick="editColor('pc3')"></div>
+                    <span>PC3 - Práctica Calificada 3</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color pa" onclick="editColor('pa')"></div>
+                    <span>PA - Participación Activa en Clase</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color ef" onclick="editColor('ef')"></div>
+                    <span>EF - Examen Final</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color pyf" onclick="editColor('pyf')"></div>
+                    <span>PYF - Proyecto Final</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color apyf" onclick="editColor('apyf')"></div>
+                    <span>APYF - Avance de Proyecto Final</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color ta" onclick="editColor('ta')"></div>
+                    <span>TA - Tarea Académica</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color aif2" onclick="editColor('aif2')"></div>
+                    <span>AIF2 - Avance de Informe Final</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color proy" onclick="editColor('proy')"></div>
+                    <span>PROY - Proyecto</span>
+                </div>
+            </div>
+            <!-- ==================== HORARIO TIPO GOOGLE CALENDAR ==================== -->
+            <div class="schedule-container">
+                <h2 class="section-title">Horario de Clases</h2>
+                <div class="calendar">
+                    <div class="time-column" id="timeColumn"></div>
+                    <div class="days-columns" id="daysColumns"></div>
+                </div>
+            </div>
+
+            <!-- Modal para agregar/editar clases -->
+            <div id="modalHorario" class="modal">
+                <div class="modal-content">
+                    <h2>Agregar / Editar Clase</h2>
+                    <div class="form-group">
+                        <label>Curso:</label>
+                        <input type="text" id="cursoInput">
+                    </div>
+                    <div class="form-group">
+                        <label>Salón:</label>
+                        <input type="text" id="salonInput">
+                    </div>
+                    <div class="form-group">
+                        <label>Día:</label>
+                        <select id="diaInput"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Inicio:</label>
+                        <input type="time" id="horaInicioInput" step="300">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Fin:</label>
+                        <input type="time" id="horaFinInput" step="300">
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="btn btn-primary" id="guardarHorario">Guardar</button>
+                        <button class="btn btn-secondary" id="cancelarHorario">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                const horaInicioDia = 7; // 7:00 am
+                const horaFinDia = 20;   // 8:00 pm
+                const alturaPorMinuto = 1; // 1px por minuto (60px por hora)
+
+                // Días de la semana
+                const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                const timeColumn = document.getElementById("timeColumn");
+                const daysColumns = document.getElementById("daysColumns");
+
+                // Llenar columna de horas
+                for (let h = horaInicioDia; h <= horaFinDia; h++) {
+                    const timeLabel = document.createElement("div");
+                    timeLabel.classList.add("time-label");
+                    timeLabel.style.height = (60 * alturaPorMinuto) + "px";
+                    timeLabel.textContent = `${String(h).padStart(2, "0")}:00`;
+                    timeColumn.appendChild(timeLabel);
+                }
+
+                // Llenar columnas de días
+                dias.forEach(dia => {
+                    const col = document.createElement("div");
+                    col.classList.add("day-column");
+                    col.dataset.dia = dia;
+                    col.addEventListener("dblclick", e => {
+                        abrirModal(null, dia);
+                    });
+
+                    const header = document.createElement("div");
+                    header.classList.add("day-header");
+                    header.textContent = dia;
+                    col.appendChild(header);
+
+                    const dayContent = document.createElement("div");
+                    dayContent.classList.add("day-content");
+                    col.appendChild(dayContent);
+
+                    daysColumns.appendChild(col);
+                });
+
+                // Datos del horario (guardados en localStorage)
+                let clases = JSON.parse(localStorage.getItem("clasesHorario")) || [];
+
+                // Modal
+                const modal = document.getElementById("modalHorario");
+                const cursoInput = document.getElementById("cursoInput");
+                const salonInput = document.getElementById("salonInput");
+                const diaInput = document.getElementById("diaInput");
+                const horaInicioInput = document.getElementById("horaInicioInput");
+                const horaFinInput = document.getElementById("horaFinInput");
+                let claseEditando = null;
+
+                // Rellenar select de días
+                dias.forEach(d => {
+                    const opt = document.createElement("option");
+                    opt.value = d;
+                    opt.textContent = d;
+                    diaInput.appendChild(opt);
+                });
+
+                function abrirModal(clase = null, dia = null) {
+                    claseEditando = clase;
+                    if (clase) {
+                        cursoInput.value = clase.curso;
+                        salonInput.value = clase.salon;
+                        diaInput.value = clase.dia;
+                        horaInicioInput.value = clase.horaInicio;
+                        horaFinInput.value = clase.horaFin;
+                    } else {
+                        cursoInput.value = "";
+                        salonInput.value = "";
+                        diaInput.value = dia || dias[0];
+                        horaInicioInput.value = "08:00";
+                        horaFinInput.value = "09:00";
+                    }
+                    modal.style.display = "block";
+                    setTimeout(() => modal.classList.add("show"), 10);
+                }
+
+                function cerrarModal() {
+                    modal.classList.remove("show");
+                    setTimeout(() => modal.style.display = "none", 300);
+                }
+
+                document.getElementById("guardarHorario").addEventListener("click", () => {
+                    const nuevaClase = {
+                        curso: cursoInput.value,
+                        salon: salonInput.value,
+                        dia: diaInput.value,
+                        horaInicio: horaInicioInput.value,
+                        horaFin: horaFinInput.value
+                    };
+
+                    if (claseEditando) {
+                        Object.assign(claseEditando, nuevaClase);
+                    } else {
+                        clases.push(nuevaClase);
+                    }
+                    localStorage.setItem("clasesHorario", JSON.stringify(clases));
+                    renderHorario();
+                    cerrarModal();
+                });
+
+                document.getElementById("cancelarHorario").addEventListener("click", cerrarModal);
+                window.addEventListener("click", e => { if (e.target === modal) cerrarModal(); });
+
+                function renderHorario() {
+                    document.querySelectorAll(".day-content").forEach(c => c.innerHTML = "");
+                    clases.forEach(clase => {
+                        const columna = document.querySelector(`.day-column[data-dia="${clase.dia}"] .day-content`);
+                        if (!columna) return;
+
+                        const [hIni, mIni] = clase.horaInicio.split(":").map(Number);
+                        const [hFin, mFin] = clase.horaFin.split(":").map(Number);
+
+                        const minutosDesdeInicio = (hIni - horaInicioDia) * 60 + mIni;
+                        const duracionMinutos = (hFin * 60 + mFin) - (hIni * 60 + mIni);
+
+                        const bloque = document.createElement("div");
+                        bloque.classList.add("class-block");
+                        bloque.style.top = (minutosDesdeInicio * alturaPorMinuto) + "px";
+                        bloque.style.height = (duracionMinutos * alturaPorMinuto) + "px";
+                        bloque.innerHTML = `<strong>${clase.curso}</strong><br><small>${clase.salon}</small>`;
+
+                        bloque.addEventListener("click", () => abrirModal(clase));
+
+                        columna.appendChild(bloque);
+                    });
+                }
+
+                renderHorario();
+            </script>
+            <div class="save-section">
+                <h3 style="color: #1565C0; margin-bottom: 15px;">Guardar Cambios</h3>
+                <button class="btn btn-primary" onclick="saveAllData()">
+                    💾 Guardar Todo Permanentemente
+                </button>
+                <p style="margin-top: 10px; font-size: 0.9em; color: #666;">Los cambios se mantendrán incluso después de
+                    cerrar el navegador</p>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn btn-primary" onclick="toggleBarcode()">
+                    📦 Código de Barras
+                </button>
+
+                <!-- Tarjeta completa oculta -->
+                <div id="barcodeCard" style="display:none;">
+                    <div class="card" role="region" aria-label="Tarjeta con código de barras">
+                        <div class="profile-header">
+                            <div class="avatar" aria-hidden="true">JC</div>
+                            <div class="user-info">
+                                <h2>Jean Cristhofer<br>Marcelo Chamorro</h2>
+                                <p>Código UTP: <strong>U23245008</strong></p>
+                            </div>
+                        </div>
+
+                        <div class="hint">Puedes ingresar a la universidad mostrando tu código</div>
+
+                        <div class="barcode-wrap">
+                            <canvas id="barcodeCanvas" width="1000" height="200" aria-label="Código de barras"></canvas>
+                        </div>
+
+                        <div class="footer">Universidad Tecnológica del Perú (UTP)</div>
+                    </div>
+                </div>
+
+                <script src="barcode.js">
+                </script>
+            </div>
+
+        </div>
+
+        <script>
+            function toggleBarcode() {
+                const card = document.getElementById('barcodeCard');
+                const isHidden = card.style.display === 'none';
+                card.style.display = isHidden ? 'block' : 'none';
+                if (isHidden) {
+                    generarCodigoBarras();
+                }
+            }
+            function generarCodigoBarras() {
+                const runs = [
+                    [false, 9], [true, 1], [false, 63], [true, 23], [false, 3], [true, 1], [false, 6], [true, 12],
+                    [false, 20], [true, 35], [false, 19], [true, 45], [false, 30], [true, 12], [false, 9], [true, 13],
+                    [false, 9], [true, 34], [false, 10], [true, 45], [false, 8], [true, 13], [false, 8], [true, 35],
+                    [false, 8], [true, 24], [false, 8], [true, 35], [false, 9], [true, 13], [false, 20], [true, 44],
+                    [false, 9], [true, 13], [false, 19], [true, 13], [false, 41], [true, 23], [false, 20], [true, 13],
+                    [false, 9], [true, 23], [false, 31], [true, 34], [false, 8], [true, 14], [false, 8], [true, 23],
+                    [false, 75]
+                ];
+
+                const totalUnits = runs.reduce((s, r) => s + r[1], 0);
+                const canvas = document.getElementById('barcodeCanvas');
+                const ctx = canvas.getContext('2d');
+
+                const internalW = 1000;
+                const internalH = 220;
+                canvas.width = internalW;
+                canvas.height = internalH;
+
+                const padX = 40;
+                const padY = 20;
+                const usableW = internalW - padX * 2;
+                const unitToPx = usableW / totalUnits;
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, internalW, internalH);
+
+                function roundRect(ctx, x, y, w, h, r) {
+                    ctx.beginPath();
+                    ctx.moveTo(x + r, y);
+                    ctx.arcTo(x + w, y, x + w, y + h, r);
+                    ctx.arcTo(x + w, y + h, x, y + h, r);
+                    ctx.arcTo(x, y + h, x, y, r);
+                    ctx.arcTo(x, y, x + w, y, r);
+                    ctx.closePath();
+                }
+
+                // Fondo
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                roundRect(ctx, padX - 8, padY - 4, usableW + 16, internalH - padY * 2 + 8, 8);
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(30,136,229,0.06)';
+                ctx.stroke();
+                ctx.restore();
+
+                // Barras
+                let x = padX;
+                const barTop = padY + 16;
+                const barHeight = internalH - (padY * 2 + 32);
+                ctx.fillStyle = '#000';
+                for (const [isBlack, count] of runs) {
+                    const w = Math.max(1, Math.round(count * unitToPx));
+                    if (isBlack) {
+                        ctx.fillRect(x, barTop, w, barHeight);
+                    }
+                    x += w;
+                }
+
+                // Sombra interna
+                ctx.save();
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = 'rgba(0,0,0,0.03)';
+                roundRect(ctx, padX - 8, padY - 4, usableW + 16, internalH - padY * 2 + 8, 10);
+                ctx.fill();
+                ctx.restore();
+
+                // Brillo leve
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = 'rgba(255,255,255,0.02)';
+                roundRect(ctx, padX + 6, padY + 6, usableW - 12, internalH - padY * 2 - 12, 6);
+                ctx.fill();
+                ctx.restore();
+
+                // Ajustar a pantallas retina
+                canvas.style.width = '100%';
+                canvas.style.height = 'auto';
+            }
+        </script>
+
+    </div>
+
+    <!-- Modal para editar color -->
+    <div id="colorModal" class="modal">
+        <div class="modal-content">
+            <h2>Cambiar Color</h2>
+            <div class="form-group">
+                <label for="evaluationTypeColor">Tipo de Evaluación:</label>
+                <input type="text" id="evaluationTypeColor" readonly>
+            </div>
+            <div class="form-group">
+                <label for="colorPicker1">Color Principal:</label>
+                <input type="color" id="colorPicker1"
+                    style="width: 100%; height: 50px; border: none; border-radius: 10px;">
+            </div>
+            <div class="form-group">
+                <label for="colorPicker2">Color Secundario (Gradiente):</label>
+                <input type="color" id="colorPicker2"
+                    style="width: 100%; height: 50px; border: none; border-radius: 10px;">
+            </div>
+            <div class="form-group">
+                <label>Vista previa:</label>
+                <div id="colorPreview" style="width: 100%; height: 50px; border-radius: 10px; border: 2px solid #ddd;">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="resetColor()">Restaurar</button>
+                <button class="btn btn-secondary" onclick="closeColorModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveColor()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar materia -->
+    <div id="subjectModal" class="modal">
+        <div class="modal-content">
+            <h2>Agregar/Editar Materia</h2>
+            <div class="form-group">
+                <label for="newSubjectName">Nombre de la Materia:</label>
+                <input type="text" id="newSubjectName" placeholder="Ingresa el nombre del curso">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeSubjectModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveSubject()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar evaluaciones -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>Editar Evaluación</h2>
+            <div class="form-group">
+                <label for="subjectName">Materia:</label>
+                <input type="text" id="subjectName" readonly>
+            </div>
+            <div class="form-group">
+                <label for="evaluationType">Tipo de Evaluación:</label>
+                <select id="evaluationType">
+                    <option value="">Vacío</option>
+                    <option value="pc1">PC1</option>
+                    <option value="pc2">PC2</option>
+                    <option value="pc3">PC3</option>
+                    <option value="pa">PA</option>
+                    <option value="ef">EF</option>
+                    <option value="pyf">PYF</option>
+                    <option value="apyf">APYF</option>
+                    <option value="ta">TA</option>
+                    <option value="aif2">AIF2</option>
+                    <option value="proy">PROY</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="evaluationCode">Código/Detalle:</label>
+                <input type="text" id="evaluationCode" placeholder="Ej: S05, S10, etc.">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveEvaluation()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar nombre de materia -->
+    <div id="editSubjectModal" class="modal">
+        <div class="modal-content">
+            <h2>Editar Nombre de la Materia</h2>
+            <div class="form-group">
+                <label for="editSubjectName">Nuevo Nombre:</label>
+                <input type="text" id="editSubjectName" placeholder="Ingresa el nuevo nombre de la materia">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeEditSubjectModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveSubjectName()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datos iniciales basados en tu imagen
+        let scheduleData = {
+            "Sistemas Operativos": ["pc1|S05", "pc2|S10", "pc3|S15", "pa|S17", "ef|S18", "", ""],
+            "Algoritmos": ["pc1|S05", "pc2|S10", "pc3|S15", "pyf|S18", "", "", ""],
+            "Base de Datos 2": ["pc1|S05", "pc2|S10", "pc3|S15", "pyf|S18", "", "", ""],
+            "Redes": ["pc1|S04", "pc2|S10", "pc3|S16", "pa|S17", "ef|S18", "", ""],
+            "Liderazgo": ["pc1|S05", "pc2|S10", "pc3|S15", "pa|S17", "ef|S18", "", ""],
+            "Taller Web": ["apyf|S05", "apyf|S10", "apyf|S15", "proy|S18", "", "", ""],
+            "Gestión de Proyectos": ["ta|S04", "aif2|S09", "aif2|S13", "pa|S17", "pyf|S18", "", ""],
+            "Diseño de Patrones": ["pc1|S05", "pc2|S10", "pc3|S15", "pyf|S18", "", "", ""]
+        };
+
+        let currentEditCell = null;
+        let currentEditingSubject = null;
+
+        // Colores por defecto
+        let currentColors = {
+            pc1: ['#FF6B6B', '#FF8E8E'],
+            pc2: ['#4ECDC4', '#44A08D'],
+            pc3: ['#45B7D1', '#96C93D'],
+            pa: ['#F7DC6F', '#F39C12'],
+            ef: ['#BB6BD9', '#8E44AD'],
+            pyf: ['#FF9A8B', '#FF8A80'],
+            apyf: ['#A8E6CF', '#66BB6A'],
+            ta: ['#FFB74D', '#FF9800'],
+            aif2: ['#81C784', '#4CAF50'],
+            proy: ['#9575CD', '#7E57C2']
+        };
+
+        function renderTable() {
+            const tbody = document.getElementById('scheduleBody');
+            tbody.innerHTML = '';
+
+            for (const [subject, evaluations] of Object.entries(scheduleData)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div class="subject-name" onclick="editSubject('${subject}')">
+                            <span>${subject}</span>
+                            <div class="subject-actions">
+                                <button class="action-btn" onclick="event.stopPropagation(); editSubject('${subject}')" title="Editar">✏️</button>
+                                <button class="action-btn delete" onclick="event.stopPropagation(); deleteSubject('${subject}')" title="Eliminar">🗑️</button>
+                            </div>
+                        </div>
+                    </td>
+                    ${evaluations.map((eval, index) => {
+                    const [type, code] = eval.split('|');
+                    const isEmpty = !eval || eval === '';
+                    return `<td>
+                            <div class="evaluation-cell ${isEmpty ? 'empty' : type}" 
+                                 onclick="editCell('${subject}', ${index})" 
+                                 data-subject="${subject}" 
+                                 data-index="${index}">
+                                ${isEmpty ? '+' : `<div>${type.toUpperCase()}</div>${code ? '<div><small>' + code + '</small></div>' : ''}`}
+                            </div>
+                            
+                        </td>`;
+                }).join('')}
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        function editCell(subject, cellIndex) {
+            currentEditCell = { subject, cellIndex };
+            const evaluation = scheduleData[subject][cellIndex];
+            const [type, code] = evaluation ? evaluation.split('|') : ['', ''];
+
+            document.getElementById('subjectName').value = subject;
+            document.getElementById('evaluationType').value = type || '';
+            document.getElementById('evaluationCode').value = code || '';
+
+            const modal = document.getElementById('editModal');
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('editModal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        function saveEvaluation() {
+            if (!currentEditCell) return;
+
+            const type = document.getElementById('evaluationType').value;
+            const code = document.getElementById('evaluationCode').value;
+
+            const evaluation = type ? `${type}${code ? '|' + code : ''}` : '';
+            scheduleData[currentEditCell.subject][currentEditCell.cellIndex] = evaluation;
+
+            renderTable();
+            closeModal();
+            saveToStorage();
+        }
+
+        function addSubject() {
+            const subjectModal = document.getElementById('subjectModal');
+            document.getElementById('newSubjectName').value = '';
+            subjectModal.style.display = 'block';
+            setTimeout(() => subjectModal.classList.add('show'), 10);
+        }
+
+        function closeSubjectModal() {
+            const subjectModal = document.getElementById('subjectModal');
+            subjectModal.classList.remove('show');
+            setTimeout(() => subjectModal.style.display = 'none', 300);
+        }
+
+        function saveSubject() {
+            const newSubjectName = document.getElementById('newSubjectName').value.trim();
+
+            if (newSubjectName && !scheduleData[newSubjectName]) {
+                scheduleData[newSubjectName] = ['', '', '', '', '', '', ''];
+                renderTable();
+                saveToStorage();
+                closeSubjectModal();
+            } else if (scheduleData[newSubjectName]) {
+                alert('Ya existe una materia con ese nombre.');
+            } else {
+                alert('El nombre de la materia no puede estar vacío.');
+            }
+        }
+
+        function editSubject(subject) {
+            currentEditingSubject = subject;
+            const modal = document.getElementById('editSubjectModal');
+            document.getElementById('editSubjectName').value = subject;
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function closeEditSubjectModal() {
+            const modal = document.getElementById('editSubjectModal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+            currentEditingSubject = null;
+        }
+
+        function saveSubjectName() {
+            if (!currentEditingSubject) return;
+
+            const newSubjectName = document.getElementById('editSubjectName').value.trim();
+
+            if (newSubjectName && !scheduleData[newSubjectName]) {
+                // Guardar los datos de la materia con el nuevo nombre
+                scheduleData[newSubjectName] = scheduleData[currentEditingSubject];
+                // Eliminar la materia con el nombre antiguo
+                delete scheduleData[currentEditingSubject];
+
+                renderTable();
+                saveToStorage();
+                closeEditSubjectModal();
+            } else if (scheduleData[newSubjectName]) {
+                alert('Ya existe un curso con ese nombre.');
+            } else {
+                alert('El nombre del curso no puede estar vacío.');
+            }
+        }
+
+        function deleteSubject(subject) {
+            if (confirm(`¿Estás seguro de que deseas eliminar el curso "${subject}"?`)) {
+                delete scheduleData[subject];
+                renderTable();
+                saveToStorage();
+            }
+        }
+
+        function editColor(type) {
+            const modal = document.getElementById('colorModal');
+            document.getElementById('evaluationTypeColor').value = type;
+
+            // Establecer los valores de los pickers de color con los valores actuales
+            document.getElementById('colorPicker1').value = currentColors[type][0];
+            document.getElementById('colorPicker2').value = currentColors[type][1];
+            updateColorPreview();
+
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function closeColorModal() {
+            const modal = document.getElementById('colorModal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        function updateColorPreview() {
+            const color1 = document.getElementById('colorPicker1').value;
+            const color2 = document.getElementById('colorPicker2').value;
+            const preview = document.getElementById('colorPreview');
+
+            preview.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+        }
+
+        function resetColor() {
+            const type = document.getElementById('evaluationTypeColor').value;
+            const defaultColors = {
+                pc1: ['#FF6B6B', '#FF8E8E'],
+                pc2: ['#4ECDC4', '#44A08D'],
+                pc3: ['#45B7D1', '#96C93D'],
+                pa: ['#F7DC6F', '#F39C12'],
+                ef: ['#BB6BD9', '#8E44AD'],
+                pyf: ['#FF9A8B', '#FF8A80'],
+                apyf: ['#A8E6CF', '#66BB6A'],
+                ta: ['#FFB74D', '#FF9800'],
+                aif2: ['#81C784', '#4CAF50'],
+                proy: ['#9575CD', '#7E57C2']
+            };
+
+            document.getElementById('colorPicker1').value = defaultColors[type][0];
+            document.getElementById('colorPicker2').value = defaultColors[type][1];
+            updateColorPreview();
+        }
+
+        function saveColor() {
+            const type = document.getElementById('evaluationTypeColor').value;
+            const color1 = document.getElementById('colorPicker1').value;
+            const color2 = document.getElementById('colorPicker2').value;
+
+            currentColors[type] = [color1, color2];
+            document.documentElement.style.setProperty(`--${type}-color`, `linear-gradient(135deg, ${color1}, ${color2})`);
+
+            closeColorModal();
+            saveToStorage();
+        }
+
+        function saveAllData() {
+            const dataToSave = {
+                scheduleData: scheduleData,
+                currentColors: currentColors
+            };
+
+            localStorage.setItem('evaluationScheduleData', JSON.stringify(dataToSave));
+            alert('Todos los cambios han sido guardados permanentemente.');
+        }
+
+        function loadFromStorage() {
+            const savedData = localStorage.getItem('evaluationScheduleData');
+
+            if (savedData) {
+                try {
+                    const parsedData = JSON.parse(savedData);
+
+                    if (parsedData.scheduleData) {
+                        scheduleData = parsedData.scheduleData;
+                    }
+
+                    if (parsedData.currentColors) {
+                        currentColors = parsedData.currentColors;
+                        // Actualizar los colores en CSS
+                        for (const [type, colors] of Object.entries(currentColors)) {
+                            document.documentElement.style.setProperty(`--${type}-color`, `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`);
+                        }
+                    }
+
+                    renderTable();
+                } catch (error) {
+                    console.error('Error al cargar datos guardados:', error);
+                }
+            }
+        }
+
+        function updateAllColors() {
+            for (const [type, colors] of Object.entries(currentColors)) {
+                document.documentElement.style.setProperty(`--${type}-color`, `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`);
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function (event) {
+            const editModal = document.getElementById('editModal');
+            const subjectModal = document.getElementById('subjectModal');
+            const colorModal = document.getElementById('colorModal');
+            const editSubjectModal = document.getElementById('editSubjectModal');
+
+            if (event.target === editModal) {
+                closeModal();
+            }
+            if (event.target === subjectModal) {
+                closeSubjectModal();
+            }
+            if (event.target === colorModal) {
+                closeColorModal();
+            }
+            if (event.target === editSubjectModal) {
+                closeEditSubjectModal();
+            }
+        }
+
+        function saveToStorage() {
+            // Esta función ahora guarda en localStorage temporalmente hasta que se llame a saveAllData()
+            saveAllData();
+        }
+
+        // Event listeners para preview de color en tiempo real
+        document.addEventListener('DOMContentLoaded', function () {
+            loadFromStorage();
+            renderTable();
+            updateAllColors();
+
+            // Agregar event listeners cuando el DOM esté listo
+            setTimeout(() => {
+                const colorPicker1 = document.getElementById('colorPicker1');
+                const colorPicker2 = document.getElementById('colorPicker2');
+
+                if (colorPicker1) colorPicker1.addEventListener('input', updateColorPreview);
+                if (colorPicker2) colorPicker2.addEventListener('input', updateColorPreview);
+            }, 100);
+        });
+    </script>
+</body>
+
+</html>
